@@ -16,6 +16,7 @@
 
 #include "dictionary.h"
 #include <stdint.h>
+#include "ff.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,7 +91,7 @@ const char * iniparser_getsecname(const dictionary * d, int n);
  */
 /*--------------------------------------------------------------------------*/
 
-void iniparser_dump_ini(const dictionary * d, FILE * f);
+void iniparser_dump_ini(const dictionary * d, FIL * f);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -104,7 +105,7 @@ void iniparser_dump_ini(const dictionary * d, FILE * f);
  */
 /*--------------------------------------------------------------------------*/
 
-void iniparser_dumpsection_ini(const dictionary * d, const char * s, FILE * f);
+void iniparser_dumpsection_ini(const dictionary * d, const char * s, FIL * f);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -118,7 +119,7 @@ void iniparser_dumpsection_ini(const dictionary * d, const char * s, FILE * f);
   purposes mostly.
  */
 /*--------------------------------------------------------------------------*/
-void iniparser_dump(const dictionary * d, FILE * f);
+void iniparser_dump(const dictionary * d, FIL * f);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -425,7 +426,7 @@ dictionary * iniparser_load(const char * ininame);
   The returned dictionary must be freed using iniparser_freedict().
  */
 /*--------------------------------------------------------------------------*/
-dictionary * iniparser_load_file(FILE * in, const char * ininame);
+dictionary * iniparser_load_file(FIL * in, const char * ininame);
 
 /*-------------------------------------------------------------------------*/
 /**

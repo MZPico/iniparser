@@ -13,6 +13,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include "iniparser.h"
+#include "ff.h"
 
 /*---------------------------- Defines -------------------------------------*/
 #define ASCIILINESZ         (1024)
@@ -230,7 +231,7 @@ const char * iniparser_getsecname(const dictionary * d, int n)
   purposes mostly.
  */
 /*--------------------------------------------------------------------------*/
-void iniparser_dump(const dictionary * d, FILE * f)
+void iniparser_dump(const dictionary * d, FIL * f)
 {
     size_t i ;
 
@@ -239,9 +240,9 @@ void iniparser_dump(const dictionary * d, FILE * f)
         if (d->key[i]==NULL)
             continue ;
         if (d->val[i]!=NULL) {
-            fprintf(f, "[%s]=[%s]\n", d->key[i], d->val[i]);
+            f_printf(f, "[%s]=[%s]\n", d->key[i], d->val[i]);
         } else {
-            fprintf(f, "[%s]=UNDEF\n", d->key[i]);
+            f_printf(f, "[%s]=UNDEF\n", d->key[i]);
         }
     }
     return ;
@@ -278,7 +279,7 @@ static void escape_value(char *escaped, char *value) {
   It is Ok to specify @c stderr or @c stdout as output files.
  */
 /*--------------------------------------------------------------------------*/
-void iniparser_dump_ini(const dictionary * d, FILE * f)
+void iniparser_dump_ini(const dictionary * d, FIL * f)
 {
     size_t       i ;
     size_t       nsec ;
@@ -294,7 +295,7 @@ void iniparser_dump_ini(const dictionary * d, FILE * f)
             if (d->key[i]==NULL)
                 continue ;
             escape_value(escaped, d->val[i]);
-            fprintf(f, "%s = \"%s\"\n", d->key[i], escaped);
+            f_printf(f, "%s = \"%s\"\n", d->key[i], escaped);
         }
         return ;
     }
@@ -302,7 +303,7 @@ void iniparser_dump_ini(const dictionary * d, FILE * f)
         secname = iniparser_getsecname(d, i) ;
         iniparser_dumpsection_ini(d, secname, f);
     }
-    fprintf(f, "\n");
+    f_printf(f, "\n");
     return ;
 }
 
@@ -318,7 +319,7 @@ void iniparser_dump_ini(const dictionary * d, FILE * f)
   file.  It is Ok to specify @c stderr or @c stdout as output files.
  */
 /*--------------------------------------------------------------------------*/
-void iniparser_dumpsection_ini(const dictionary * d, const char * s, FILE * f)
+void iniparser_dumpsection_ini(const dictionary * d, const char * s, FIL * f)
 {
     size_t  j ;
     char    keym[ASCIILINESZ+1];
@@ -330,17 +331,17 @@ void iniparser_dumpsection_ini(const dictionary * d, const char * s, FILE * f)
     if (strlen(s) > sizeof(keym)) return;
 
     seclen  = (int)strlen(s);
-    fprintf(f, "\n[%s]\n", s);
+    f_printf(f, "\n[%s]\n", s);
     sprintf(keym, "%s:", s);
     for (j=0 ; j<d->size ; j++) {
         if (d->key[j]==NULL)
             continue ;
         if (!strncmp(d->key[j], keym, seclen+1)) {
             escape_value(escaped, d->val[j]);
-            fprintf(f, "%-30s = \"%s\"\n", d->key[j]+seclen+1, escaped);
+            f_printf(f, "%-30s = \"%s\"\n", d->key[j]+seclen+1, escaped);
         }
     }
-    fprintf(f, "\n");
+    f_printf(f, "\n");
     return ;
 }
 
@@ -813,7 +814,7 @@ static line_status iniparser_line(
   The returned dictionary must be freed using iniparser_freedict().
  */
 /*--------------------------------------------------------------------------*/
-dictionary * iniparser_load_file(FILE * in, const char * ininame)
+dictionary * iniparser_load_file(FIL * in, const char * ininame)
 {
     char line    [ASCIILINESZ+1] ;
     char section [ASCIILINESZ+1] ;
@@ -840,13 +841,13 @@ dictionary * iniparser_load_file(FILE * in, const char * ininame)
     memset(val,     0, ASCIILINESZ);
     last=0 ;
 
-    while (fgets(line+last, ASCIILINESZ-last, in)!=NULL) {
+    while (f_gets(line+last, ASCIILINESZ-last, in)!=0) {
         lineno++ ;
         len = (int)strlen(line)-1;
         if (len<=0)
             continue;
         /* Safety check against buffer overflows */
-        if (line[len]!='\n' && !feof(in)) {
+        if (line[len]!='\n' && !f_eof(in)) {
             iniparser_error_callback(
               "iniparser: input line too long in %s (%d)\n",
               ininame,
@@ -927,16 +928,16 @@ dictionary * iniparser_load_file(FILE * in, const char * ininame)
 /*--------------------------------------------------------------------------*/
 dictionary * iniparser_load(const char * ininame)
 {
-    FILE * in ;
+    FIL in;
     dictionary * dict ;
 
-    if ((in=fopen(ininame, "r"))==NULL) {
+    if ((f_open(&in, ininame, FA_READ))!=FR_OK) {
         iniparser_error_callback("iniparser: cannot open %s\n", ininame);
         return NULL ;
     }
 
-    dict = iniparser_load_file(in, ininame);
-    fclose(in);
+    dict = iniparser_load_file(&in, ininame);
+    f_close(&in);
 
     return dict ;
 }
